@@ -9,8 +9,8 @@ import (
 )
 
 type logGroup struct {
-	group   string
-	streams []*cloudwatchlogs.LogStream
+	group  string
+	stream *cloudwatchlogs.LogStream
 }
 
 // event struct stores log event response to pass back to the channel
@@ -28,8 +28,7 @@ func (l *logGroup) getEvents(sess *session.Session, logs chan<- *cloudwatchlogs.
 	svc := cloudwatchlogs.New(sess)
 	args := params()
 
-	t := time.NewTicker(time.Millisecond * 1500)
-	for _ = range t.C {
+	for ch := time.Tick(time.Millisecond * 1300); ; <-ch {
 		resp, err := svc.GetLogEvents(args)
 		if err != nil {
 			return err
@@ -43,7 +42,6 @@ func (l *logGroup) getEvents(sess *session.Session, logs chan<- *cloudwatchlogs.
 
 		args.NextToken = resp.NextForwardToken
 	}
-	return nil
 }
 
 func (l *logGroup) getStreams(sess *session.Session, params func() *cloudwatchlogs.DescribeLogStreamsInput) error {
@@ -55,7 +53,7 @@ func (l *logGroup) getStreams(sess *session.Session, params func() *cloudwatchlo
 	}
 	log.Debug(fmt.Sprintln("response:", resp))
 
-	l.streams = resp.LogStreams
+	l.stream = resp.LogStreams[0]
 	return nil
 }
 
@@ -65,8 +63,11 @@ func printEvents(done <-chan bool, logs <-chan *cloudwatchlogs.OutputLogEvent) {
 		case l := <-logs:
 			log.Info(fmt.Sprintf(
 				"%s - %s",
-				log.ColorString(time.Unix(*l.Timestamp/1000, 0).String(), "cyan"),
-				*l.Message,
+				log.ColorString(
+					time.Unix(*l.Timestamp/1000, 0).String(),
+					"cyan",
+				),
+				parse(l.Message),
 			))
 		case <-done:
 			return

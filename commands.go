@@ -42,16 +42,17 @@ var cwtailCmd = &cobra.Command{
 					}
 				})
 
-				for _, streams := range lg.streams {
-					if err := lg.getEvents(sess, logs, func() *cloudwatchlogs.GetLogEventsInput {
-						return &cloudwatchlogs.GetLogEventsInput{
-							LogGroupName:  &group,
-							LogStreamName: streams.LogStreamName,
-						}
-					}); err != nil {
-						handleError(err)
+				// for _, streams := range lg.streams {
+				if err := lg.getEvents(sess, logs, func() *cloudwatchlogs.GetLogEventsInput {
+					return &cloudwatchlogs.GetLogEventsInput{
+						LogGroupName: &group,
+						// tail the most recent stream
+						LogStreamName: lg.stream.LogStreamName,
 					}
+				}); err != nil {
+					handleError(err)
 				}
+				// }
 				return
 			}(group)
 		}
