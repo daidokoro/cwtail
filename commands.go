@@ -33,14 +33,16 @@ var cwtailCmd = &cobra.Command{
 			go func(group string) {
 				defer wg.Done()
 				lg := newLogGroup(group)
-				lg.getStreams(sess, func() *cloudwatchlogs.DescribeLogStreamsInput {
+				if err := lg.getStreams(sess, func() *cloudwatchlogs.DescribeLogStreamsInput {
 					return &cloudwatchlogs.DescribeLogStreamsInput{
 						OrderBy:      aws.String("LastEventTime"),
 						LogGroupName: &group,
 						Limit:        aws.Int64(1),
 						Descending:   aws.Bool(true),
 					}
-				})
+				}); err != nil {
+					handleError(err)
+				}
 
 				// for _, streams := range lg.streams {
 				if err := lg.getEvents(sess, logs, func() *cloudwatchlogs.GetLogEventsInput {
